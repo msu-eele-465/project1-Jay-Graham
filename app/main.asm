@@ -77,19 +77,65 @@
 
 RESET       mov.w   #__STACK_END,SP         ; Initialize stack pointer
 StopWDT     mov.w   #WDTPW+WDTHOLD,&WDTCTL  ; Stop WDT
-SetupP1     bic.b   #BIT0,&P1OUT            ; Clear P1.0 output
-            bis.b   #BIT0,&P1DIR            ; P1.0 output
-            bic.w   #LOCKLPM5,&PM5CTL0       ; Unlock I/O pins
 
-Mainloop    xor.b   #BIT0,&P1OUT            ; Toggle P1.0 every 0.1s
-Wait        mov.w   #50000,R15              ; Delay to R15
-L1          dec.w   R15                     ; Decrement R15
-            jnz     L1                      ; Delay over?
-            jmp     Mainloop                ; Again
-            NOP
 ;------------------------------------------------------------------------------
-;           Interrupt Vectors
+; Initialization
+;------------------------------------------------------------------------------
+init: 
+            ; Configure P1.0 (LED1) as output
+		    bis.b	#BIT0, &P1DIR				; set as output
+		    bis.b	#BIT0, &P1OUT				; clear output 
+
+            ; Configure P6.6 (LED2) as output
+		    bis.b	#BIT6, &P6DIR				; set as output
+		    bic.b	#BIT6, &P6OUT				; clear output
+
+            ; Enable high-z bits
+            bic.b   #LOCKLPM5, &PM5CTL0     
+
+            ; Timer Setup
+            bis.w	#TBCLR, &TB0CTL				; clear timers and dividers
+		    bis.w	#TBSSEL__ACLK, &TB0CTL		; select ACLK as timer source
+		    bis.w	#MC__CONTINUOUS, &TB0CTL	; choose continous counting
+		    bis.w	#CNTL_1, &TB0CTL			; set counter
+		    bis.w	#ID__8, &TB0CTL				; set divider
+            bis.w	#TBIE, &TB0CTL				; enable interrupt service vector
+            bic.w   #TBIFG, &TB0CTL             ; clear interrupt flag
+            bis.w   #GIE, SR                    ; enable global interrupts
+
+;------------------------------------------------------------------------------
+; Main Loop
+;------------------------------------------------------------------------------
+main: 
+            xor.b   #BIT0, &P1OUT           ; Toggle P1.0 (LED1)
+            mov.w   #1000, R14              ; Load 1000 into R14 (outer loop)
+
+delay_1s:
+            mov.w   #347, R15               ; Load 1000 into R15 (inner loop)
+            cmp     #0, R14                 ; compare outer loop to 0
+            jz      main                    ; if outer loop = 0, jump to main
+            
+delay_1ms: 
+            dec.w   R15                     ; decrement inner Loop
+            jnz     delay_1ms               ; if inner loop not zero, repeat delay_1ms
+            dec.w   R14                     ; decrement outer loop
+            jmp     delay_1s                ; if inner loop = 0, jump to delay_1s
+
+;------------------------------------------------------------------------------
+; TimerB0 Interrupt Service Routine (P6.6)
+;------------------------------------------------------------------------------
+TimerB0_1s:
+            xor.b   #BIT6, &P6OUT           ; Toggle P6.6 (LED2)
+            bic.w   #TBIFG, &TB0CTL         ; Clear TBIFG interrupt flag
+            reti                            ; Return from interrupt
+
+;------------------------------------------------------------------------------
+; Interrupt Vectors
 ;------------------------------------------------------------------------------
             .sect   RESET_VECTOR            ; MSP430 RESET Vector
-            .short  RESET                   ;
+            .short  RESET                   ; Reset Vector
+
+            .sect   ".int42"                ; TimerB0 overflow vector
+            .short  TimerB0_1s              ; Timer ISR
+
             .end
