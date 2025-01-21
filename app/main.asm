@@ -84,7 +84,7 @@ StopWDT     mov.w   #WDTPW+WDTHOLD,&WDTCTL  ; Stop WDT
 init: 
             ; Configure P1.0 (LED1) as output
 		    bis.b	#BIT0, &P1DIR				; set as output
-		    bic.b	#BIT0, &P1OUT				; clear output 
+		    bis.b	#BIT0, &P1OUT				; clear output 
 
             ; Configure P6.6 (LED2) as output
 		    bis.b	#BIT6, &P6DIR				; set as output
