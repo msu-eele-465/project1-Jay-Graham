@@ -111,7 +111,7 @@ main:
             mov.w   #1000, R14              ; Load 1000 into R14 (outer loop)
 
 delay_1s:
-            mov.w   #349, R15               ; Load 1000 into R15 (inner loop)
+            mov.w   #347, R15               ; Load 1000 into R15 (inner loop)
             cmp     #0, R14                 ; compare outer loop to 0
             jz      main                    ; if outer loop = 0, jump to main
             
