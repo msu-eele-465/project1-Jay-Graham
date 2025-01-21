@@ -77,16 +77,33 @@
 
 RESET       mov.w   #__STACK_END,SP         ; Initialize stack pointer
 StopWDT     mov.w   #WDTPW+WDTHOLD,&WDTCTL  ; Stop WDT
-SetupP1     bic.b   #BIT0,&P1OUT            ; Clear P1.0 output
-            bis.b   #BIT0,&P1DIR            ; P1.0 output
-            bic.w   #LOCKLPM5,&PM5CTL0       ; Unlock I/O pins
 
-Mainloop    xor.b   #BIT0,&P1OUT            ; Toggle P1.0 every 0.1s
-Wait        mov.w   #50000,R15              ; Delay to R15
-L1          dec.w   R15                     ; Decrement R15
-            jnz     L1                      ; Delay over?
-            jmp     Mainloop                ; Again
+;------------------------------------------------------------------------------
+; Main Loop 
+;------------------------------------------------------------------------------
+
+init: 
+            bis.b   #BIT0, &P1DIR           ; Set P1.0 (LED1) as an output
+            bic.b   #BIT0, &P1OUT           ; Clear P1.0 (LED1)
+            bic.w   #LOCKLPM5, &PM5CTL0     ; Unlock I/O pins
+
+main: 
+            xor.b   #BIT0, &P1OUT           ; Toggle P1.0 (LED1)
+            mov.w   #500, R14              ; Load 5000 into R14
+
+outer_loop:
+            mov.w   #1000, R15              ; Load 5000 into R15
+
+ms_delay:   
+            dec.w   R15                     ; decrement R15
+            jnz     ms_delay                ; repeat until R15 = 0
+            dec.w   R14                     ; decrement R14
+            jnz     outer_loop              ; repeat until R14 = 0
+            jmp     main                    ; repeat main loop forever  
             NOP
+
+
+
 ;------------------------------------------------------------------------------
 ;           Interrupt Vectors
 ;------------------------------------------------------------------------------
